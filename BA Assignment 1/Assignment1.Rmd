@@ -1,0 +1,48 @@
+---
+title: "Pavan Chaitanya Business Analytics Assignment – Setting Up R"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+date: "2022-09-24"
+---
+# This Assignment helps in Analyzing the role of descriptive statistics in data exploration phase of analytics projects.
+
+```{r }
+
+#Install the ISLR library using the install.packages() command.
+    #install.packages("ISLR")
+    #As this ISLR package is already installed it will not show an error that the package is      already installed.
+
+
+#Calling the ISLR library using the library(ISLR) command to ensure that the library is correctly installed.
+library(ISLR)
+
+#Viewing the data set file Carseats that is present in the ISLR Library.
+   View(Carseats)
+
+#print the summary of the Carseats dataset
+  summary(Carseats)
+
+#Printing the  maximum value of the advertising attribute that is present in Carseats datset.
+   max(Carseats$Advertising)
+
+#Calculating the InterQuartileRange(Upper Range-Lower range) of the Price attribute
+  IQR(Carseats$Price)
+
+#Plotting and calculating the correlation between sales VS Price
+#plotting the Sales against Price
+plot(Carseats$Sales,Carseats$Price,main = "Ploting the Sales against Price",xlab = "Sales",ylab = "Price")
+  # Answer: I see that the points scattered 
+  
+  # Calculating the correlation of the two attributes(sales vS Price).
+cor.test(Carseats$Sales, Carseats$Price, method = c("pearson"))
+  
+
+# There is a negative sign of the correlation coefficient. It suggests that the when one         variable increases ,other variable decreases.
+        #ie when -> Sales increases Price decreases. 
+        #           Price increases Sales decreases.
+
+
+```
+
