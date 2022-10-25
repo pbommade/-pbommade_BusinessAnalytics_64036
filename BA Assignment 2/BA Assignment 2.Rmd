@@ -1,0 +1,201 @@
+---
+title: "BA Assignment 2"
+author: "Pavan Chaitanya"
+date: "2022-10-20"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+
+
+```{r}
+library(tidyverse)
+Online_Retail <- read_csv("C:/Users/Pavan Chaitanya/Downloads/Online_Retail.csv")
+head(Online_Retail)
+```
+# 1.	Show the breakdown of the number of transactions by countries i.e. how many transactions are in the dataset for each country (consider all records including cancelled transactions). Show this in total number and also in percentage. Show only countries accounting for more than 1% of the total transactions. 
+```{r}
+Online_Retail %>%
+group_by(Country)  %>%
+  tally(sort = TRUE) %>% summarise(Country, Counts = n, Percent = n/sum(n)*100) %>% filter(Percent > 1)
+```
+
+UK, Germany, France, and EIRE account for more than 1% of the total transactions in this dataset.
+
+# 2.	Create a new variable ‘TransactionValue’ that is the product of the exising ‘Quantity’ and ‘UnitPrice’ variables. Add this variable to the dataframe. 
+```{r}
+Online_Retail <- mutate(Online_Retail, TransactionValue = Quantity * UnitPrice)
+head(Online_Retail[, 9])
+```
+# 3.	Using the newly created variable, TransactionValue, show the breakdown of transaction values by countries i.e. how much money in total has been spent each country. Show this in total sum of transaction values. Show only countries with total transaction exceeding 130,000 British Pound. 
+```{r}
+Online_Retail %>%
+group_by(Country) %>% 
+  summarise(TransValueSum = sum(TransactionValue)) %>% filter(TransValueSum > 130000) %>% arrange(desc(TransValueSum))
+```
+
+UK, Netherlands, EIRE, Germany, France, and Australia are the countries where their sum is greater than 130,000 British Pound.
+
+# 4. we are dealing with the InvoiceDate variable. The variable is read as a categorical when you read data from the file. Now we need to explicitly instruct R to interpret this as a Date variable. "POSIXlt" and "POSIXct" are two powerful object classes in R to deal with date and time. Click here for more information.
+```{r}
+Temp <- strptime(Online_Retail$InvoiceDate,format='%m/%d/%Y %H:%M',tz='GMT')
+head(Temp)
+head(Online_Retail)
+Online_Retail$New_Invoice_Date <- as.Date(Temp)
+Online_Retail$Invoice_Day_Week <- weekdays(Online_Retail$New_Invoice_Date)
+Online_Retail$New_Invoice_Hour <- as.numeric(format(Temp, "%H"))
+Online_Retail$New_Invoice_Month <- as.numeric(format(Temp, "%m"))
+head(Online_Retail)
+```
+
+# a)	Show the percentage of transactions (by numbers) by days of the week 
+```{r}
+Online_Retail %>%  
+  group_by(Invoice_Day_Week) %>% 
+  tally(sort = TRUE) %>% 
+  summarise(Invoice_Day_Week, TransactionCounts = n, Percent = n/sum(n)*100) %>% 
+  arrange(desc(TransactionCounts))
+```
+# b)	Show the percentage of transactions (by transaction volume) by days of the week 
+```{r}
+Online_Retail %>% 
+  group_by(Invoice_Day_Week) %>% 
+  summarise(TransValueSum = sum(TransactionValue)) %>%
+  mutate(TransValuePercent = TransValueSum/sum(TransValueSum)) %>% 
+  arrange(desc(TransValueSum))
+```
+
+# c)	Show the percentage of transactions (by transaction volume) by month of the year 
+```{r}
+Online_Retail %>%
+  group_by(New_Invoice_Month) %>% 
+  summarise(TransValueSum = sum(TransactionValue)) %>% 
+  mutate(TransValuePercent = TransValueSum/sum(TransValueSum)) %>% 
+  arrange(desc(TransValuePercent))
+```
+# d)	What was the date with the highest number of transactions from Australia
+```{r}
+Online_Retail %>% 
+  filter(Country == "Australia") %>% 
+  group_by(InvoiceDate) %>% 
+  tally(sort = TRUE) %>% 
+  filter(n == max(n))
+```
+# e)	The company needs to shut down the website for two consecutive hours for maintenance. What would be the hour of the day to start this so that the distribution is at minimum for the customers? The responsible IT team is available from 7:00 to 20:00 every day. 
+```{r}
+Online_Retail %>% 
+  group_by(New_Invoice_Hour) %>% 
+  tally(sort = TRUE) %>% 
+  filter(New_Invoice_Hour>= 7 & New_Invoice_Hour<=20) %>% 
+  arrange(n) %>% 
+  head(5)
+```
+
+The answer is the 19th and 20th since they are the 2nd and 3rd lowest values and then combined would be the lowest sum of two consecutive hours.
+
+# 5.	Plot the histogram of transaction values from Germany. Use the hist() function to plot
+```{r}
+Online_Retail %>%
+  group_by(Country) %>%
+  filter(Country == "Germany") %>% 
+  group_by(New_Invoice_Month) %>% 
+  summarise(TransValueSum = sum(TransactionValue)) -> Germany
+hist(Germany$TransValueSum, border = "deepskyblue3", main = "Germany Transaction Value", xlab = "Transaction Value Sum per Month", ylab = "Frequency", col = "deepskyblue")
+```
+
+
+# 6.Which customer had the highest number of transactions? Which customer is most valuable
+```{r}
+Online_Retail %>%
+  group_by(CustomerID) %>%
+  tally(sort = TRUE) %>% 
+  filter(!is.na(CustomerID)) %>% 
+  filter(n==max(n))
+Online_Retail %>%
+  group_by(CustomerID) %>% 
+  summarise(Transvaluesum = sum(TransactionValue)) %>% 
+  filter(!is.na(CustomerID)) %>% 
+  filter(Transvaluesum == max(Transvaluesum))
+  
+```
+
+Customer 17841 has the most transactions of 7,983 and customer 14646 is the most valuable spending 279,489 British Pound.
+
+# 7.	Calculate the percentage of missing values for each variable in the dataset 
+```{r}
+colMeans(is.na(Online_Retail))
+```
+
+Only columns "Description" (.2% missing values) and "CustomerID" (24.9% missing values) have missing values.
+
+# 8.	What are the number of transactions with missing CustomerID records by countries? 
+```{r}
+Online_Retail %>% 
+  filter(is.na(CustomerID)) %>% 
+  group_by(Country) %>% 
+  summarise(CustomerID) %>% 
+  tally(sort = TRUE) # Total "NA" by country.
+```
+# 9.	On average, how often the costumers comeback to the website for their next shopping? 
+```{r}
+Online_Retail %>% # Creating a variable for the number of days between visits.
+  select(CustomerID, New_Invoice_Date) %>% 
+  group_by(CustomerID) %>% 
+  distinct(New_Invoice_Date) %>% 
+  arrange(desc(CustomerID)) %>% 
+  mutate(DaysBetween = New_Invoice_Date - lag(New_Invoice_Date))-> CustDaysBtwVisit #Combined DaysBetween per CustomerID.  
+ 
+CustDaysBtwVisit %>% 
+   filter(!is.na(DaysBetween)) -> RetCustDaysBtwVisits # Filtered "NA" from dataset.
+mean(RetCustDaysBtwVisits$DaysBetween)
+```
+
+The customers who did return had an average of 38.5 days between visits.
+
+# 10.	In the retail sector, it is very important to understand the return rate of the goods purchased by customers. In this example, we can define this quantity, simply, as the ratio of the number of transactions cancelled (regardless of the transaction value) over the total number of transactions. With this definition, what is the return rate for the French customers? 
+```{r}
+Online_Retail %>% # Found the returns from France.
+  group_by(Country) %>% 
+  filter(Country == "France") %>% 
+  select(Country, Quantity) %>% 
+  filter(Quantity < 0) -> FrenchReturns
+  Online_Retail %>%  # Found the purchases from France.
+  group_by(Country) %>% 
+  filter(Country == "France") %>% 
+  select(Quantity, Country) %>% 
+  filter(Quantity > 0) -> FrenchPurchases
+FRReturns <- sum(FrenchReturns$Quantity) # calculated the quantity of returns from France.
+FRTransactions <- sum(FrenchPurchases$Quantity) # calculated the quanity of purchased from France.
+FRReturns/FRTransactions *100 # Using the above two numbers, I then calculated the return rate.
+```
+
+France has a 1.45% return rate.
+
+# 11.	What is the product that has generated the highest revenue for the retailer? 
+```{r}
+Online_Retail %>%
+  group_by(StockCode) %>% 
+  summarise(TransactionValueTot = sum(TransactionValue)) %>% 
+  arrange(desc(TransactionValueTot)) %>% 
+  filter(StockCode != "DOT") %>%  # Looks like this is postage for delivering products.
+  filter(TransactionValueTot == max(TransactionValueTot))
+Online_Retail %>% 
+  group_by(StockCode) %>% 
+  filter(StockCode == "22423") %>% 
+  select(StockCode, Description) %>% 
+  distinct(StockCode, Description) %>% 
+  filter(Description == "REGENCY CAKESTAND 3 TIER")
+```
+
+Regency 3 tiered cakestand had the highest revenue.
+
+# 12.	How many unique customers are represented in the dataset? 
+```{r}
+Online_Retail %>% 
+  group_by(CustomerID) %>% 
+  distinct(CustomerID) -> UniqueCustomers
+  length(UniqueCustomers$CustomerID)
+```
+There are 4373 unique customers in this dataset.
