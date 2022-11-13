@@ -1,0 +1,133 @@
+---
+title: "BA Assignment 3"
+author: "Pavan Chaitanya"
+date: "2022-11-09"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1: Run the following code in R-studio to create two variables X and Y
+```{r}
+
+set.seed(2017)
+X=runif(100)*10
+Y=X*4+3.45
+Y=rnorm(100)*0.29*Y+Y
+```
+# a) Plot Y against X. Include a screenshot of the plot in your submission. Using the File menu you can save the graph as a picture on your computer. Based on the plot do you think we can fit a linear model to explain Y based on X?
+```{r}
+
+# scatterplot
+plot(X,Y, main="Scatterplot",xlab = "X",ylab = "Y",col =blues9,pch=15 )
+# Yes, based on the scatterplot we can fit a linear model to explain Y based on X.
+```
+# b) Construct a simple linear model of Y based on X. Write the equation that explains Y based on X. What is the accuracy of this model?
+```{r}
+plot(X,Y,xlim=c(0, 10),xlab="X", ylab="Y", main="SImple Linear Model",col=blues9,pch=15)
+abline(lsfit(X, Y),col = "black")
+
+# The Equation is Y = B0 + B1X + E .
+# The error term that the regression model was unable to explain is represented by the regression coefficient B0, which also represents the intercept, B1, which also represents the slope.
+# The model's R square accuracy is 65%. 
+```
+# c) How the Coefficient of Determination, R^2, of the model above is related to the correlation coefficient of X and Y?
+```{r}
+
+Coefficient_Determination <- cor(X,Y)^2
+Coefficient_Determination
+
+# Coefficient of determination R^2 is equal (r)^2, that is, Correlation Coefficient squared. R^2 or coefficient of determination shows percentage variation in y that is explained by the independent variable x. R^2 is usually between 0 and 1. It is obtained by getting the square value of the Coefficient of correlation, “r” value. 
+```
+# Question 2 : We  will  use  the  ‘mtcars’  dataset  for  this  question.  The  dataset  is  already  included  in  your  R distribution. The dataset shows some of the characteristics of different cars. The following shows few samples (i.e. the first 6 rows) of the dataset. The description of the dataset can be found here. 
+```{r}
+
+head(mtcars)
+```
+# a) James wants to buy a car. He and his friend, Chris, have different opinions about the Horse Power (hp) of cars. James think the weight of a car (wt) can be used to estimate the Horse Power of the car while Chris thinks the fuel consumption expressed in Mile Per Gallon (mpg), is a better estimator of the (hp). Who do you think is right? Construct simple linear models using mtcars data to answer the question.
+```{r}
+
+# James opinion about the HorsePower (hp) of cars
+model <- lm(hp ~ wt, data = mtcars)
+summary(model)
+
+# Chris' opinion about the Horse Power (hp) of cars
+model <- lm(hp ~ mpg, data = mtcars)
+summary(model)
+
+# The linear model below demonstrates that Chris is correct since fuel economy (MPG) accounts for 60% of the variation in horsepower, and James' perspective is irrelevant because vehicle weight (wt) only accounts for 43% of that variation.
+
+# Consequently, mpg is a more accurate indicator of a car's horsepower.
+```
+# b) Build a model that uses the number of cylinders (cyl) and the mile per gallon (mpg) values of a car to predict the car Horse Power (hp). Using this model, what is the estimated Horse Power of a car with 4 calendar and mpg of 22? 
+```{r}
+
+model <- lm(hp ~ cyl + mpg, data = mtcars)
+summary(model)
+predict(model, data.frame(cyl=4, mpg=22))
+# The estimated horsepower = 89
+```
+# Quuestion 3: For this question, we are going to use BostonHousing dataset. The dataset is in ‘mlbench’ package, so we first need to instal the package, call the library and the load the dataset using the following commands 
+```{r}
+
+# install.packages('mlbench') 
+library(mlbench) 
+data(BostonHousing) 
+```
+# a) Build a model to estimate the median value of owner-occupied homes (medv)based on the following  variables:  crime  crate  (crim),  proportion  of  residential  land  zoned  for  lots  over  25,000  sq.ft  (zn),  the  local  pupil-teacher  ratio  (ptratio)  and  weather  the  whether  the  tract bounds Chas River(chas). Is this an accurate model? (Hint check R2 )
+```{r}
+
+library('mlbench')
+data(BostonHousing)
+head(BostonHousing)
+model <- lm(medv~crim+zn+ptratio+chas, data=BostonHousing)
+summary(model)
+
+
+# R2 = 36% for the coefficient of determination. Based on the above variables, this is a shaky estimate of the median owner-occupied home value (medv). This model's precision cannot be trusted.
+
+# Based on the summary output lets plot the histogram to analyze the assumptions of the regression Model.
+hist(model$residuals,main = "Medium House Residuals",xlab = "Residuals",ylab = "Frequency")
+```
+```{r}
+
+```
+# b) Use the estimated coefficient to answer these questions?   
+ 
+#      I. Imagine two houses that are identical in all aspects but one bounds the Chas River and the other does not. Which one is more expensive and by how much?
+```{r}
+
+summary(model)
+# According to estimated coefficients, the price of the house along the Chas River will be higher since it will rise by $4584 in comparison to any other house.
+```
+#     II. Imagine two houses that are identical in all aspects but in the neighborhood of one of them the pupil-teacher ratio is 15 and in the other one is 18. Which one is more expensive and by how much? 
+```{r}
+
+comparision <- 1494 *3
+comparision
+# If the coefficient of pupil to teacher ratio = -1.49367 then there will be a decrease of approximately $1,494 to every unit change in the ptratio. Therefore, if the pupil-teacher ratio is raised by 3 units (yielding pupil-teacher ratio of 15 and 18 for the two houses). The estimated values indicates that the pupil-teacher ratio of 18 will be less expensive compared to that of pupil-teacher ratio of 15 ($1,494 *3) it’ll be $4,482.
+```
+
+```{r}
+
+```
+# c) Which of the variables are statistically important (i.e. related to the house price)? Hint:use the p-values of the coefficients to answer.
+```{r}
+
+summary(model)
+# Given that each of the four variables' p-values is less than or equal to 0.05, they are all statistically significant.
+```
+# d) Use the anova analysis and determine the order of importance of these four variables. 
+```{r}
+
+print(anova(model))
+# Using the sum square, the order of importance will be:
+# 1. Crim = 6440.8
+# 2. Ptratio= 4709.5 
+# 3. Zn = 3554.3 
+# 4. Chas = 667.2
+```
