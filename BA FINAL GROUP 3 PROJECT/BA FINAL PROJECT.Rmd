@@ -1,0 +1,207 @@
+---
+title: "BA Group Project"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+date: "2022-12-01"
+---
+# Part 1 : Churn Data
+# Loading the required Libraries that are required for the Project.
+```{r}
+library(readr)
+library(tidyverse)
+library(caret)
+library(gmodels)
+library(rpart)
+library(pROC)
+library(rattle)
+
+```
+
+# Importing the Churn Dataset that is given to us.
+```{r}
+Given_Churn_Datafile= read.csv("C:/Users/Pavan Chaitanya/Downloads/Churn_Train.csv")
+
+```
+
+# Examinig the details regarding the data file.
+```{r}
+# Head Part of the Data file
+head(Given_Churn_Datafile)
+
+#Summary of the Data present in the data file.
+summary(Given_Churn_Datafile)
+
+#Data Types of Data Columns in the Data file
+str(Given_Churn_Datafile)
+
+#Glimpse of the Data Given to us
+glimpse(Given_Churn_Datafile)
+
+```
+
+# Data Type Conversion.
+```{r}
+# Converting the Char type data to factors for our convience
+Given_Churn_Datafile = Given_Churn_Datafile %>% mutate_if(is.character, as.factor)
+
+```
+
+# Checking where the data conversion is sucessful or not.
+```{r}
+str(Given_Churn_Datafile)
+```
+
+# Checking for the NA values if they are present in the dataset .
+```{r}
+colSums(is.na(Given_Churn_Datafile))
+
+```
+
+# Checking for the Negative Values if they are present in dataset by columns wise.
+```{r}
+sapply(Given_Churn_Datafile %>% select_if(is.numeric), function(x) {
+                                                                      sum(x < 0, na.rm = TRUE)
+                                                                    })
+Given_Churn_Datafile =
+  Given_Churn_Datafile %>% mutate_if(is.numeric, function(x) {
+                                                                  ifelse(x < 0, abs(x), x)
+                                                              })
+# We see that account_length and number_vmail_messages have some Negative values and we cannot remove them because they are connected to the final Churn Variable.
+```
+
+# To deal with NA Values that are present in the data and removing from the data set. 
+```{r}
+# We are following the MedianImpute as a Method to dela with the NA Values in the Dataset 
+NA_Dealing_Model= preProcess(Given_Churn_Datafile %>% select_if(is.numeric),method = "medianImpute")
+Predict_Data = predict(NA_Dealing_Model, Given_Churn_Datafile %>% select_if(is.numeric))
+
+Given_Churn_Datafile = Given_Churn_Datafile %>% select(setdiff(names(Given_Churn_Datafile), names(Predict_Data))) %>% cbind(Predict_Data)
+
+# Viewing the Datafile with no NA Values
+view(Given_Churn_Datafile)
+
+# Checking Finally wether there are any NA Values Present in the each Column of the dataset.
+colSums(is.na(Given_Churn_Datafile))
+```
+# Visualization of the Data present in the Dataset
+```{r}
+# Numeric Values Distribution Plot
+Given_Churn_Datafile %>% select_if(is.numeric) %>% mutate_all(scale) %>% gather("features","values") %>% na.omit() %>% 
+  ggplot(aes(x = features, y = values)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(x = " Numeric Variables") +
+  ggtitle(label = "Numeric Values Distribution")
+```
+
+```{r}
+# Churn Variable Visualization
+ggplot(Given_Churn_Datafile, aes(x=churn, y=..prop..,group = 2)) + 
+  geom_bar(fill="Red") +
+    geom_text(aes(label=round(..prop..,1)),stat = "count",
+            position = position_stack(vjust=0.8)) + 
+  scale_x_discrete(labels = c("Not Churned","Yes Churned"))
+
+# From the Plot we can see that 90 % hasn't churned but 10 % churned.
+```
+# Adding the State and Churn Variables to the Updated Churn Dataset for our calculations.
+```{r}
+str(Given_Churn_Datafile) # Without Updation
+Given_Churn_Datafile = Given_Churn_Datafile %>% select(-state, -churn) %>% 
+  fastDummies::dummy_cols(., remove_selected_columns = TRUE) %>% mutate(state = Given_Churn_Datafile$state, churn = Given_Churn_Datafile$churn)
+str(Given_Churn_Datafile) # With Updation
+```
+
+# Model Strategy
+
+# we are following the Decesion tree  as our Model beacuse we believe that to illustrate the influence of numerous variables and their significance in forecasting the result of the target variable , so we will go with Decision Tree approach.
+
+# So preprocessing of Data:
+```{r}
+# Splitting  the dataset into training set(75%) and validation set(25%).
+set.seed(5454)
+Data_partition<- createDataPartition(Given_Churn_Datafile$churn, p=0.75, list=FALSE)
+Req_Churn_Data_train = Given_Churn_Datafile[Data_partition,]
+Req_Churn_Data_test = Given_Churn_Datafile[-Data_partition,]
+
+```
+
+# Scaling the Preprocessed Data
+```{r}
+PreProcess_Scale <- preProcess(Req_Churn_Data_train %>% select_if(is.numeric), method = c("center", "scale"))
+Req_Churn_Data_train_norm <- predict(PreProcess_Scale, Req_Churn_Data_train %>% select_if(is.numeric))
+Req_Churn_Data_test_norm <- predict(PreProcess_Scale, Req_Churn_Data_test %>% select_if(is.numeric))
+
+Req_Churn_Data_train_norm$churn <- Req_Churn_Data_train$churn
+Req_Churn_Data_test_norm$churn <- Req_Churn_Data_test$churn
+```
+
+# Model Construction
+```{r}
+# Using Rplot
+DecisionTree_Model <- rpart(churn ~ ., data = Req_Churn_Data_train_norm, method = "class")
+summary(DecisionTree_Model)
+plot(DecisionTree_Model)
+text(DecisionTree_Model)
+print(DecisionTree_Model)
+
+
+# Using fancyRpartPlot
+fancyRpartPlot(DecisionTree_Model)
+```
+```{r}
+
+```
+# Model Building is done and we can intrepret the results.
+```{r}
+# Predicting values using based on DecisionTree_Model.
+pred_labels <- predict(object = DecisionTree_Model,Req_Churn_Data_test_norm, type = "class")
+pred_probs <- predict(object = DecisionTree_Model,Req_Churn_Data_test_norm)
+
+# Performance Metrics
+# Confusion matrix for the DecisionTree_Model.
+CrossTable(x=Req_Churn_Data_test_norm$churn, y = pred_labels, prop.chisq = FALSE)
+confusionMatrix(pred_labels,Req_Churn_Data_test_norm$churn)
+
+# From the confusion Matrix we can say that 
+
+# Accuracy ~ 0.93
+# Sensitivity ~ 0.95         
+# Specificity ~0.6
+```
+
+# AUC of the  Model
+```{r}
+roc(Req_Churn_Data_test$churn, pred_probs[,2])
+
+# As AUC is greater than 0.8 we can say that the model is good.
+
+# Plotting the AUC of the Model
+plot.roc(roc(Req_Churn_Data_test$churn, pred_probs[,2]))
+```
+# Part 2 : Predicting for Customers_To_Predict
+```{r}
+# We need to use load() to read the RData file
+load("C:/Users/Pavan Chaitanya/Downloads/Customers_To_Predict.RData")
+Customers_To_Predict_data  <- Customers_To_Predict
+Customers_To_Predict <- Customers_To_Predict %>% select(-state) %>% fastDummies::dummy_cols(., remove_selected_columns = TRUE)
+Customers_To_Predict <- as.data.frame(scale(Customers_To_Predict))
+predict_labels <- predict(object = DecisionTree_Model, Customers_To_Predict, type = "class")
+
+# Adding the New Predicting column to the Customer_To_Predict Datafile.
+Customers_To_Predict <- Customers_To_Predict_data %>% mutate(Churn_Prob = predict_labels)
+
+# Viewing the Updated Data File
+View(Customers_To_Predict)
+
+#Head Part of the Updated Data file
+head(Customers_To_Predict)
+
+#Printing only the Churn_Prob Column
+print(Customers_To_Predict$Churn_Prob)
+
+#Displaying the count of Yes/No Present in Churn_Prob Column.
+table(Customers_To_Predict$Churn_Prob)
+
+```
